@@ -2,6 +2,14 @@
 
 Fork do [RePlay da ElfHosted](https://github.com/elfhosted/replay), sob AGPL-3.0. Consulta histórico e estatísticas de Nuvio, Stremio e backends Nuvio compatíveis. A interface de acesso, navegação principal e avisos críticos foram adaptados para português brasileiro; parte dos textos analíticos permanece no idioma upstream.
 
+## Interface Central (1.1.0)
+
+Redesign com navegação lateral, hierarquia de indicadores, painel de horários acessível por teclado e tabela, pesquisa local do histórico e adaptação a desktop, ultrawide e celular. A referência é a Central Oracle VPS fornecida pelo usuário. A pesquisa não altera indicadores, escopo de exclusão nem o backend.
+
+A camada visual fica em `styles.css` e `ui.js`. O motor `app.js` é idêntico ao commit de base, exceto pelo identificador de versão; um teste de hash protege esse contrato. Os testes de paridade com a versão anterior comparam números, títulos, imagens, gêneros, elenco, datas, perfis, novos episódios e exportações simuladas.
+
+Os dados e imagens de testes são artificiais e não são incluídos na imagem de produção. A interface real só apresenta dados retornados pela conta conectada.
+
 ## O que muda
 
 Nuvio é a seleção inicial. Newsletter, formulários Kit, promoção comercial de hospedagem e cartões sociais comerciais foram removidos. O JavaScript fica em arquivo próprio, sem bibliotecas de runtime, permitindo CSP sem script inline. Escrita, exclusão, exportação e restauração continuam disponíveis com suas confirmações. A licença, os créditos e o código-fonte permanecem acessíveis.

@@ -3,7 +3,7 @@
 
   // Replaced at image build time. Left as the placeholder when the file is
   // opened straight from a checkout, which is how you can tell the two apart.
-  var VERSION = 'v1.0.0-personal';
+  var VERSION = 'v1.1.0-personal';
   var CINEMETA = 'https://v3-cinemeta.strem.io';
   var SPELLS = ['Lendo seu histórico', 'Organizando os títulos', 'Calculando as estatísticas', 'Carregando os metadados'];
   var spellTimer = null;

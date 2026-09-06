@@ -1,314 +1,37 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="referrer" content="no-referrer">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="referrer" content="no-referrer">
 <title>RePlay | Seu histórico de streaming</title>
-<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
 <meta name="description" content="Histórico, estatísticas e gerenciamento da sua conta Nuvio ou Stremio. Processamento no navegador.">
 <meta name="robots" content="noindex, nofollow, noarchive">
-<style>
-  :root {
-    color-scheme: dark;
-    --bg:#08090b; --bg2:#101216; --card:#15171b; --card2:#1e2126;
-    --fg:#f0f2f4; --dim:#a3a9b0; --faint:#6c737b; --line:#272b31;
-    /* ElfHosted greens (#50762E / #8D9E40 / #36511F), lifted for a dark page */
-    --g1:#a3d45f; --g2:#4fbf9e; --g3:#e0b44a; --g4:#d98e4a; --g5:#7fa8d9;
-    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI Variable", "Segoe UI", Roboto, sans-serif;
-    --num: "SF Pro Display", ui-sans-serif, system-ui, sans-serif;
-    --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-    --r:20px;
-    --pageW: min(62rem, calc(100vw - 1.75rem));
-  }
-  * { box-sizing:border-box; }
-  html { -webkit-text-size-adjust:100%; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:400 16px/1.5 var(--sans);
-         -webkit-font-smoothing:antialiased; overflow-x:hidden; }
-  main { width:var(--pageW); margin:0 auto; padding:2rem 0 5rem; }
-  #topbar { position:sticky; top:0; z-index:20; padding:.7rem 0 .65rem; margin:0 0 1rem;
-            background:color-mix(in srgb, var(--bg) 88%, transparent);
-            backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
-            border-bottom:1px solid var(--line); }
-  .brandmark { display:inline-flex; align-items:center; gap:.55rem; text-decoration:none;
-               margin:0 0 .7rem; color:var(--fg); }
-  .brandmark img { display:block; width:30px; height:30px; }
-  .brandmark span { font:600 .95rem/1 var(--sans); letter-spacing:-.01em; color:var(--dim); }
-  .brandmark b { color:var(--fg); font-weight:700; }
-  #signedin { display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; margin-top:.7rem;
-              font-size:.85rem; color:var(--dim); }
-  #signedin b { color:var(--fg); font-weight:650; }
-  .optin { display:flex; align-items:flex-start; gap:.55rem; margin:.15rem 0 .2rem;
-           font:400 .82rem/1.5 var(--sans); color:var(--faint); cursor:pointer; }
-  .optin input { width:auto; flex:0 0 auto; margin:.2rem 0 0; padding:0; }
-  .signup { display:flex; gap:.4rem; margin:.6rem 0 .5rem; }
-  .signup input { flex:1 1 auto; min-width:0; padding:.5rem .7rem; border:1px solid var(--line);
-                  border-radius:10px; background:var(--bg); color:inherit; font:400 .85rem/1.2 var(--sans); }
-  .signup input:focus { outline:0; border-color:var(--g1); }
-  .signup button { border:0; border-radius:10px; padding:.5rem .9rem; cursor:pointer;
-                   background:linear-gradient(96deg,var(--g1),var(--g2)); color:#fff;
-                   font:700 .82rem/1 var(--sans); white-space:nowrap; }
-  .signup button[disabled] { opacity:.5; cursor:not-allowed; }
-  a { color:inherit; }
-
-  /* ---- motion ---- */
-  @keyframes rise { from { opacity:0; transform:translateY(22px); } to { opacity:1; transform:none; } }
-  @keyframes pop { from { opacity:0; transform:scale(.9); } to { opacity:1; transform:none; } }
-  @keyframes grow { from { transform:scaleY(0); } to { transform:none; } }
-  @keyframes drift { from { transform:scale(1.08) translateY(0); } to { transform:scale(1.15) translateY(-12px); } }
-  .reveal { opacity:0; }
-  .reveal.in { animation:rise .62s cubic-bezier(.2,.7,.3,1) both; }
-  @media (prefers-reduced-motion: reduce) {
-    .reveal, .reveal.in { opacity:1; animation:none !important; }
-    .hero-art { animation:none !important; }
-  }
-
-  /* ---- type ---- */
-  h1 { font:700 2.1rem/1.08 var(--num); letter-spacing:-.035em; margin:0; }
-  h2 { font:700 1.35rem/1.15 var(--num); letter-spacing:-.028em; margin:2.75rem 0 .9rem; }
-  .eyebrow { font:700 .68rem/1 var(--sans); letter-spacing:.18em; text-transform:uppercase;
-             color:var(--faint); margin:0 0 .7rem; }
-  .sub { color:var(--dim); margin:.5rem 0 0; font-size:.95rem; line-height:1.55; }
-  p { margin:0 0 1rem; }
-
-  /* ---- hero ---- */
-  .hero { position:relative; border-radius:var(--r); overflow:hidden; min-height:21rem;
-          display:flex; flex-direction:column; justify-content:flex-end; padding:1.6rem;
-          background:linear-gradient(150deg,#241a3d,#0d0a17); isolation:isolate; }
-  .hero-art { position:absolute; inset:0; background-size:cover; background-position:center;
-              opacity:0; z-index:-2; animation:drift 24s ease-in-out infinite alternate;
-              transition:opacity 1.4s ease; }
-  .hero-art.on { opacity:.42; }
-  .hero::after { content:""; position:absolute; inset:0; z-index:-1;
-                 background:linear-gradient(0deg,rgba(8,7,12,.97) 0%,rgba(8,7,12,.92) 30%,
-                            rgba(8,7,12,.62) 62%,rgba(8,7,12,.18) 100%),
-                            linear-gradient(90deg,rgba(8,7,12,.75) 0%,rgba(8,7,12,.15) 55%,transparent 80%); }
-  .hero .eyebrow { color:#cfc8de; }
-  .hero .fig { font:800 clamp(3.6rem,15vw,5.6rem)/.88 var(--num); letter-spacing:-.055em;
-               background:linear-gradient(96deg,var(--g1),var(--g3) 75%);
-               -webkit-background-clip:text; background-clip:text; color:transparent;
-               margin:0 0 .1rem; font-variant-numeric:tabular-nums; }
-  .hero .cap { font-size:1.05rem; color:var(--fg); max-width:26rem; }
-  .hero .eyebrow { color:#cfc8de; margin-bottom:.25rem; }
-  .hero .herotitle { font:700 clamp(1.3rem,4.2vw,1.9rem)/1.15 var(--num); letter-spacing:-.03em;
-                     margin:0 0 .5rem; max-width:30rem; }
-  .hero .cap b { font-weight:700; }
-
-  /* ---- cards ---- */
-  .cards { display:grid; gap:.7rem; grid-template-columns:repeat(2,1fr); margin:.7rem 0 0; }
-  .card { background:var(--card); border-radius:var(--r); padding:1.15rem 1.15rem 1.05rem;
-          position:relative; overflow:hidden; }
-  .card .numrow { display:flex; align-items:center; gap:.6rem; margin:0 0 .3rem; }
-  .card .em { font-size:1.3rem; line-height:1; }
-  .card .n { font:800 2.1rem/1 var(--num); letter-spacing:-.04em;
-             font-variant-numeric:tabular-nums; }
-  .card .k { font-size:.85rem; color:var(--dim); line-height:1.35; display:block; }
-  .card.wide { grid-column:1 / -1; }
-  .card.tint1 { background:linear-gradient(145deg,rgba(163,212,95,.13),rgba(163,212,95,.02) 68%),var(--card); }
-  .card.tint1 .n { color:var(--g1); }
-  .card.tint2 { background:linear-gradient(145deg,rgba(79,191,158,.14),rgba(79,191,158,.02) 68%),var(--card); }
-  .card.tint2 .n { color:var(--g2); }
-  .card.tint3 { background:linear-gradient(145deg,rgba(224,180,74,.13),rgba(224,180,74,.02) 68%),var(--card); }
-  .card.tint3 .n { color:var(--g3); }
-  .card.tint4 { background:linear-gradient(145deg,rgba(217,142,74,.13),rgba(217,142,74,.02) 68%),var(--card); }
-  .card.tint4 .n { color:var(--g4); }
-  .card.tint5 { background:linear-gradient(145deg,rgba(127,168,217,.13),rgba(127,168,217,.02) 68%),var(--card); }
-  .card.tint5 .n { color:var(--g5); }
-
-  /* ---- badges ---- */
-  .badges { display:flex; flex-wrap:wrap; gap:.55rem; margin:0; padding:0; list-style:none; }
-  .badge { display:flex; align-items:center; gap:.6rem; background:var(--card);
-           border-radius:999px; padding:.5rem .95rem .5rem .55rem; animation:pop .45s both; }
-  .badge .em { width:2rem; height:2rem; border-radius:50%; display:grid; place-items:center;
-               font-size:1rem; background:linear-gradient(135deg,#2c3a22,#44562f); }
-  .badge b { font-size:.9rem; font-weight:650; }
-  .badge span { display:block; font-size:.76rem; color:var(--dim); }
-
-  /* ---- top titles ---- */
-  ol.top { list-style:none; margin:0; padding:0; display:grid; gap:.6rem; }
-  ol.top li { display:flex; align-items:center; gap:.85rem; background:var(--card);
-              border-radius:14px; padding:.55rem .95rem .55rem .55rem; }
-  ol.top .rank { font:800 1.05rem/1 var(--num); width:1.6rem; text-align:center; color:var(--faint);
-                 font-variant-numeric:tabular-nums; }
-  ol.top .art { width:2.9rem; height:4.3rem; border-radius:8px; object-fit:cover; flex:0 0 auto;
-                background:var(--card2); }
-  ol.top .meta { flex:1 1 auto; min-width:0; }
-  ol.top .nm { font-weight:650; display:block; white-space:nowrap; overflow:hidden;
-               text-overflow:ellipsis; text-decoration:none; color:inherit; }
-  ol.top a.nm:hover, ol.top a.nm:focus-visible { text-decoration:underline; outline:0; }
-  ol.top .sm { font-size:.8rem; color:var(--dim); }
-  ol.top .hrs { font:700 .95rem/1 var(--num); color:var(--g1); font-variant-numeric:tabular-nums; }
-
-  /* ---- genres ---- */
-  .genres { display:flex; flex-wrap:wrap; gap:1.05rem .6rem; margin:0 0 1rem; padding:0; list-style:none; }
-  .chip { border-radius:999px; padding:.5rem 1rem; font-size:.85rem; font-weight:600;
-          background:var(--card2); }
-  .holders { display:grid; gap:.7rem; grid-template-columns:repeat(auto-fit,minmax(13rem,1fr)); }
-  .holder { background:var(--card); border-radius:var(--r); padding:1.1rem 1.15rem; cursor:default;
-            transition:background .15s ease, box-shadow .15s ease; }
-  .holder:hover { background:var(--card2); box-shadow:inset 0 0 0 1px var(--line); }
-  .holder b { display:block; font:700 1rem/1.2 var(--num); letter-spacing:-.01em; margin-bottom:.5rem; }
-  .holder .who { display:block; font-size:.88rem; color:var(--dim); margin-bottom:.3rem; }
-  .holder .read { display:block; font-size:.82rem; color:var(--faint); line-height:1.5; }
-  .holder.mine { background:linear-gradient(150deg,#1e2f14,#101709);
-                 box-shadow:inset 0 0 0 1px rgba(163,212,95,.35); }
-  .holder.mine:hover { background:linear-gradient(150deg,#25391a,#141d0c);
-                       box-shadow:inset 0 0 0 1px rgba(163,212,95,.55); }
-  .holder.mine b { color:var(--g1); }
-  .holder.mine .who { color:var(--g4); font-weight:600; }
-  a.cta-link { display:inline-block; text-decoration:none; border-radius:999px;
-               padding:.75rem 1.35rem; font:700 .95rem/1 var(--sans); color:#f1f5ec;
-               background:linear-gradient(96deg,#50762e,#8d9e40); }
-  .breakdown-details { margin-top:1.6rem; }
-  .breakdown-details > summary { cursor:pointer; font:600 .85rem/1 var(--sans); color:var(--dim);
-                                 padding:.6rem 0; list-style:revert; }
-  .breakdown-details > summary:hover { color:var(--fg); }
-  .breakdown-details[open] > summary { margin-bottom:.7rem; }
-  #peoplenote a { color:var(--dim); text-decoration-color:color-mix(in srgb, currentColor 45%, transparent);
-                  text-underline-offset:3px; }
-  #peoplenote a:hover, #peoplenote a:focus-visible { color:var(--fg); text-decoration-color:currentColor; }
-  a.chip { display:inline-block; text-decoration:none; transition:filter .15s ease; }
-  a.chip:hover, a.chip:focus-visible { filter:brightness(1.35); outline:0; }
-  .gbar { display:flex; height:.55rem; border-radius:999px; overflow:hidden; margin:0 0 .8rem; }
-  .gbar i { display:block; }
-
-  /* ---- clock ---- */
-  .clock { display:flex; align-items:flex-end; gap:3px; height:7rem; margin:.4rem 0 .5rem; }
-  .clock i { flex:1; border-radius:4px 4px 2px 2px; transform-origin:bottom;
-             background:linear-gradient(180deg,var(--g1),#36511f); animation:grow .7s both; }
-  .clock i.peak { background:linear-gradient(180deg,var(--g3),var(--g1)); }
-  .axis { display:flex; justify-content:space-between; font-size:.75rem; color:var(--faint); }
-
-  /* ---- timeline ---- */
-  .switch { display:flex; gap:.4rem; margin:0 0 1rem; flex-wrap:wrap; }
-  .switch button { background:var(--card); color:var(--dim); border:0; border-radius:999px;
-                   padding:.45rem .9rem; font:600 .82rem/1 var(--sans); cursor:pointer; }
-  .switch button[aria-selected="true"] { background:var(--fg); color:var(--bg); }
-  /* Height is reserved even when there is nothing to toggle, so switching
-     backends does not shunt the inputs up and down the page. */
-  #modes { min-height:1.7rem; margin:.9rem 0 .35rem; }
-  #mode-toggle { background:none; border:0; padding:0; cursor:pointer; color:var(--dim);
-                 font:400 .85rem/1.7 var(--sans); text-decoration:underline;
-                 text-decoration-color:color-mix(in srgb, currentColor 40%, transparent);
-                 text-underline-offset:3px; }
-  #mode-toggle:hover, #mode-toggle:focus-visible { color:var(--fg); outline:0; }
-  #mode-toggle[hidden] { visibility:hidden; display:inline-block !important; }
-  #timeline { max-height:32rem; overflow-y:auto; overscroll-behavior:contain;
-              -webkit-mask-image:linear-gradient(180deg,#000 88%,transparent);
-              mask-image:linear-gradient(180deg,#000 88%,transparent); }
-  #timeline.open { max-height:none; overflow:visible; -webkit-mask-image:none; mask-image:none; }
-  .tlyear { position:sticky; top:0; z-index:2; background:var(--bg); padding:.9rem 0 .4rem;
-            font:800 1.5rem/1 var(--num); letter-spacing:-.03em; font-variant-numeric:tabular-nums; }
-  .tlmonth { font:700 .66rem/1 var(--sans); letter-spacing:.16em; text-transform:uppercase;
-             color:var(--faint); margin:.9rem 0 .45rem; }
-  ol.tl { list-style:none; margin:0; padding:0; display:grid; gap:.35rem; }
-  ol.tl li { display:flex; align-items:center; gap:.35rem; }
-  ol.tl a { flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:.75rem;
-            text-decoration:none; background:var(--card); border-radius:12px;
-            padding:.45rem .85rem .45rem .45rem; }
-  .scrub { flex:0 0 auto; border:0; border-radius:10px; cursor:pointer; background:var(--card);
-           color:var(--faint); font:600 .74rem/1 var(--sans); padding:.6rem .7rem;
-           opacity:0; transition:opacity .12s ease, color .12s ease; }
-  ol.tl li:hover .scrub, .scrub:focus-visible, .scrub.armed { opacity:1; }
-  .scrub:hover, .scrub:focus-visible { color:var(--g4); outline:0; }
-  .scrub.armed { color:var(--g4); background:var(--card2); }
-  /* No progress entry to delete: holds the gutter open so the list edge is straight. */
-  .scrub.noscrub { visibility:hidden; }
-  ol.tl a:hover, ol.tl a:focus-visible { background:var(--card2); outline:0; }
-  ol.tl .art { width:2.1rem; height:3.1rem; border-radius:6px; object-fit:cover; flex:0 0 auto;
-               background:var(--card2); }
-  ol.tl .nm { flex:1 1 auto; min-width:0; font-size:.92rem; white-space:nowrap;
-              overflow:hidden; text-overflow:ellipsis; }
-  ol.tl .meta { flex:0 0 auto; display:flex; flex-direction:column; align-items:flex-end;
-                gap:.22rem; min-width:5.6rem; }
-  ol.tl .bar { width:5rem; height:6px; border-radius:999px; background:#2b3826; overflow:hidden; }
-  ol.tl .bar i { display:block; height:100%; border-radius:999px;
-                 background:linear-gradient(90deg,var(--g1),var(--g3)); }
-  ol.tl .st { font-size:.72rem; color:var(--dim); font-variant-numeric:tabular-nums; line-height:1.1; }
-  ol.tl .d { font-size:.72rem; color:var(--faint); font-variant-numeric:tabular-nums; line-height:1.1; }
-  ol.tl li.unplayed .nm { color:var(--dim); }
-
-  /* ---- the turn ---- */
-  /* ---- record + table ---- */
-  dl.rec { margin:0; display:grid; gap:0; }
-  dl.rec > div { display:flex; justify-content:space-between; gap:1.2rem; align-items:baseline;
-                 padding:.6rem 0; border-bottom:1px solid var(--line); }
-  dl.rec dt { font-size:.82rem; color:var(--faint); }
-  dl.rec dd { margin:0; font-size:.9rem; text-align:right; word-break:break-word; }
-  .scroll { overflow-x:auto; border-radius:var(--r); background:var(--card); }
-  table { border-collapse:collapse; width:100%; font-size:.88rem; }
-  th, td { text-align:left; padding:.6rem .85rem; border-bottom:1px solid var(--line); vertical-align:top; }
-  thead th { font:700 .66rem/1 var(--sans); letter-spacing:.13em; text-transform:uppercase; color:var(--faint); }
-  tbody tr:last-child td { border-bottom:0; }
-  td:last-child, th:last-child { background:rgba(163,212,95,.09); }
-  th:last-child { color:var(--g1); }
-
-  /* ---- form ---- */
-  form { display:grid; gap:.6rem; }
-  input { width:100%; padding:.85rem 1rem; border:1px solid var(--line); border-radius:12px;
-          background:var(--card); color:inherit; font:400 1rem/1.2 var(--sans); }
-  input:focus { outline:0; border-color:var(--g2); }
-  button.cta { background:linear-gradient(96deg,var(--g1),var(--g2)); color:#fff; border:0;
-               border-radius:999px; padding:.9rem 1.5rem; font:700 1rem/1 var(--sans); cursor:pointer; }
-  button.ghost { background:var(--card); color:var(--fg); border:0; border-radius:999px;
-                 padding:.6rem 1.1rem; font:600 .85rem/1 var(--sans); cursor:pointer; }
-  button[disabled] { opacity:.5; cursor:not-allowed; }
-  .fine { font-size:.82rem; line-height:1.55; color:var(--faint); }
-  .status { display:none; font-size:.9rem; padding:.7rem 0; color:var(--dim); }
-  .status.show { display:block; }
-  .status.err { color:#e0794a; }
-  .prog { height:2px; background:var(--line); border-radius:2px; overflow:hidden; margin:.7rem 0 0; }
-  .prog i { display:block; height:100%; width:0; background:linear-gradient(90deg,#50762e,var(--g1));
-            transition:width .3s ease; }
-  ul.profiles { list-style:none; margin:0 0 1rem; padding:0; display:grid; gap:.5rem; }
-  ul.profiles li { display:flex; align-items:center; gap:.7rem; background:var(--card);
-                   border-radius:12px; padding:.6rem .9rem; font-size:.9rem; }
-  ul.profiles .av { width:1.9rem; height:1.9rem; border-radius:50%; flex:0 0 auto; display:grid;
-                    place-items:center; font:700 .72rem/1 var(--sans); color:#fff;
-                    background:linear-gradient(135deg,var(--g2),var(--g1)); overflow:hidden; }
-  ul.profiles img.av { display:block; object-fit:cover; }
-  ul.profiles .art { width:1.9rem; height:2.8rem; border-radius:6px; flex:0 0 auto;
-                     object-fit:cover; background:var(--card2); }
-  ul.profiles .pn { flex:1 1 auto; font-weight:600; }
-  ul.profiles .pl { font-size:.78rem; color:var(--dim); }
-  ul.shelf { list-style:none; margin:.9rem 0 0; padding:0; }
-  ul.shelf li { display:flex; align-items:baseline; gap:.8rem; padding:.6rem 0;
-                border-bottom:1px solid var(--line); }
-  ul.shelf .c { font:800 1.1rem/1 var(--num); min-width:3.2rem; text-align:right;
-                font-variant-numeric:tabular-nums; }
-  ul.shelf .l { flex:1 1 auto; font-size:.88rem; }
-  ul.shelf .l b { display:block; font-weight:650; font-size:.92rem; }
-  ul.shelf .l span { color:var(--dim); }
-  .withheld { background:var(--card); border-radius:var(--r); padding:1.1rem 1.15rem; margin:0 0 1rem; }
-  .withheld ul { margin:.5rem 0 0; padding-left:1.1rem; color:var(--dim); font-size:.88rem; }
-  .withheld li { margin:.25rem 0; }
-  ul.options { list-style:none; margin:0; padding:0; }
-  ul.options li { padding:.85rem 0; border-bottom:1px solid var(--line); font-size:.92rem; color:var(--dim); }
-  ul.options strong { color:var(--fg); font-weight:650; }
-  code { font:600 .8rem/1 var(--mono); color:var(--dim); }
-  [hidden] { display:none !important; }
-  footer { margin-top:3rem; padding-top:1.2rem; border-top:1px solid var(--line);
-           font-size:.8rem; line-height:1.65; color:var(--faint); }
-  footer a { color:var(--dim); text-underline-offset:3px; }
-  footer a:hover { color:var(--fg); }
-  @media (max-width:30rem) { .cards { grid-template-columns:1fr; } }
-</style>
 </head>
 <body>
-<main>
-
+<a class="skip-link" href="#main-content">Pular para o conteúdo</a>
+<aside id="sidebar" aria-label="Navegação principal">
+  <a class="brandmark" href="./"><img src="icon.svg" alt=""><span><b>RePlay</b><small>Seu streaming em dados</small></span></a>
+  <nav aria-label="Seções do RePlay"><a href="#overview" id="nav-overview" data-nav="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-8H9v8H4a1 1 0 0 1-1-1z"/></svg><span>Visão geral</span></a>
+<a href="#ranking" id="nav-ranking" data-nav="ranking"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 8h4m-4 8h4M17 8h4m-4 8h4"/></svg><span>Mais assistidos</span></a>
+<a href="#insights" id="nav-insights" data-nav="insights"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10m8 10V4m8 16v-7"/></svg><span>Preferências</span></a>
+<a href="#history" id="nav-history" data-nav="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Histórico</span></a>
+<a href="#account-section" id="nav-account" data-nav="account-section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M17 5a3 3 0 0 1 0 6m1 4a5 5 0 0 1 3 4v2"/></svg><span>Conta e perfis</span></a>
+<a href="#actions" id="nav-actions" data-nav="actions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg><span>Gerenciar dados</span></a></nav>
+  <div class="nav-references"><p>REFERÊNCIAS</p><a href="#privacy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6z"/><path d="m8 12 3 3 5-6"/></svg><span>Privacidade e limites</span></a><a href="https://oracle-vps-central.chiquin2008.chatgpt.site/" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6h.01M7 17h.01"/></svg><span>Central VPS</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg></a></div>
+  <div class="sidebar-bottom"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6z"/><path d="m8 12 3 3 5-6"/></svg><span>Instância pessoal</span></div>
+</aside>
+<button id="nav-backdrop" aria-label="Fechar navegação" hidden></button>
+<main id="main-content" tabindex="-1">
   <header id="topbar">
-    <a class="brandmark" href="./"><img src="icon.svg" alt="RePlay"><span><b>RePlay</b> | Instância pessoal</span></a>
-    <div class="switch" role="tablist" aria-label="Escolher backend" id="backends">
-      <button type="button" data-backend="nuvio" role="tab" aria-selected="true">Nuvio</button>
-      <button type="button" data-backend="stremio" role="tab" aria-selected="false">Stremio</button>
-      <button type="button" data-backend="custom" role="tab" aria-selected="false">Backend próprio</button>
-    </div>
-    <div id="signedin" hidden><span id="signedintext"></span><button type="button" class="ghost" id="switchacct">Trocar de conta</button></div>
+    <div class="breadcrumb"><button id="nav-toggle" type="button" aria-label="Abrir navegação" aria-controls="sidebar" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><span>RePlay</span><span class="separator">/</span><b id="breadcrumb-current">Conectar conta</b></div>
+    <label id="top-search" class="search-field"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><span class="sr-only">Buscar no histórico</span><input id="history-query" type="search" placeholder="Buscar no histórico..." autocomplete="off" disabled><kbd>/</kbd></label>
+    <div class="topbar-actions"><span id="session-indicator">Processamento local</span><button id="export-shortcut" type="button" class="ghost icon-button" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg><span>Exportar dados</span></button></div>
   </header>
-
-  <section id="signin">
-    <h1>Seu histórico, em perspectiva</h1>
+  <div class="source-bar"><span class="source-label">Fonte dos dados</span><div class="switch" role="tablist" aria-label="Escolher backend" id="backends"><button type="button" data-backend="nuvio" role="tab" aria-selected="true">Nuvio</button><button type="button" data-backend="stremio" role="tab" aria-selected="false">Stremio</button><button type="button" data-backend="custom" role="tab" aria-selected="false">Backend próprio</button></div><div id="signedin" hidden><span id="signedintext"></span><button type="button" class="ghost" id="switchacct">Trocar de conta</button></div></div>
+  <div id="login-layout" class="login-layout">
+    <div class="login-context"><div class="brand-symbol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10m8 10V4m8 16v-7"/></svg></div><h2>Seu histórico.<br>Uma nova perspectiva.</h2><p>Transforme os registros da sua conta em uma visão clara do que você assiste.</p><dl class="login-features"><div><dt><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 8h4m-4 8h4M17 8h4m-4 8h4"/></svg>Títulos e preferências</dt><dd>Ranking, gêneros, décadas e elenco a partir dos seus registros.</dd></div><div><dt><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Histórico em detalhe</dt><dd>Progresso, datas e filtros para encontrar cada reprodução.</dd></div><div><dt><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6z"/><path d="m8 12 3 3 5-6"/></svg>Controle dos seus dados</dt><dd>Consulta no navegador. Exportação e gestão com confirmação.</dd></div></dl><p class="login-footnote">Sem outro catálogo no player. Sem telemetria.</p></div>
+    <section id="signin" aria-labelledby="signin-title">
+    <h1 id="signin-title">Conecte sua conta.</h1>
     <p class="sub" id="standfirst"></p>
     <div id="modes"><button type="button" id="mode-toggle"></button></div>
     <form id="form">
@@ -323,7 +46,7 @@
       </div>
       <div id="panel-key" hidden style="display:grid;gap:.6rem"><input id="authkey" type="password" placeholder="Chave de autenticação" aria-label="Chave de autenticação Stremio" autocomplete="off" spellcheck="false"></div>
       <label class="optin"><input type="checkbox" id="remember" autocomplete="off"><span>Manter conectado neste dispositivo por até 30 dias. Use apenas em dispositivo pessoal.</span></label>
-      <div style="margin-top:.45rem"><button type="submit" class="cta" id="go">Gerar meu RePlay</button></div>
+      <div style="margin-top:.45rem"><button type="submit" class="cta" id="go">Abrir meu RePlay</button></div>
     </form>
     <div id="resume" class="card" hidden style="margin-top:1rem;padding:.85rem 1rem">
       <span class="k" id="resumetext"></span><p style="margin:.7rem 0 0;display:flex;gap:.5rem;flex-wrap:wrap"><button type="button" class="cta" id="resumego">Continuar</button><button type="button" class="ghost" id="resumenew">Nova sessão</button></p>
@@ -332,99 +55,31 @@
     <div class="prog" id="prog" hidden><i></i></div>
     <p class="fine" id="signinfine" style="margin-top:1.2rem">O navegador se conecta diretamente a <span id="targethost">api.nuvio.tv</span>. A VPS entrega somente os arquivos do RePlay: não recebe sua senha nem armazena seu histórico. A sessão fica nesta aba, salvo se você marcar a opção de permanecer conectado. <a href="https://github.com/AdrianoHG/replay" target="_blank" rel="noopener noreferrer">Consultar o código-fonte</a>.</p>
   </section>
-
+  </div>
   <section id="results" hidden>
-
-    <div class="hero reveal" id="hero">
-      <div class="hero-art" id="heroart"></div>
-      <div class="hero-art" id="heroart2"></div>
-      <p class="eyebrow" id="heroperiod" style="margin-bottom:.55rem">Seu histórico</p>
-      <h1 class="herotitle" id="herotitle"></h1>
-      <span class="fig" id="herofig">0</span>
-      <p class="cap" id="herocap"></p>
-    </div>
-
-    <div class="switch" id="years" style="margin-top:1rem"></div>
-    <div class="switch" id="months" hidden style="margin-top:.5rem"></div>
-
-    <div class="cards" id="cards"></div>
-    <p class="fine" id="hoursnote" style="margin-top:.7rem" hidden></p>
-    <ul class="shelf" id="shelfstates"></ul>
-    <p class="fine" id="shelfnote" style="margin-top:.9rem"></p>
-
-
-    <h2 class="reveal">Seus destaques</h2>
-    <ul class="badges" id="badges"></ul>
-
-    <h2 class="reveal">Mais assistidos</h2>
-    <ol class="top" id="top"></ol>
-
-    <h2 class="reveal">Seus gêneros</h2>
-    <div class="gbar" id="gbar"></div>
-    <ul class="genres" id="genres"></ul>
-    <p class="fine" id="genrenote"></p>
-
-    <h2 class="reveal">Décadas em destaque</h2>
-    <div class="gbar" id="decbar"></div>
-    <ul class="genres" id="decades"></ul>
-    <p class="fine" id="decnote"></p>
-
-    <h2 class="reveal">Elenco em destaque</h2>
-    <ul class="genres" id="people"></ul>
-    <p class="fine" id="peoplenote"></p>
-
-    <h2 class="reveal">Horários de reprodução</h2>
-    <div class="clock" id="clock" role="img" aria-label="Atividade por hora do dia"></div>
-    <div class="axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
-    <p class="fine" id="clocknote"></p>
-
-    <h2 class="reveal">Seu histórico</h2>
-    <div class="switch" role="tablist">
-      <button type="button" id="tl-played" role="tab" aria-selected="true">Reproduzidos</button>
-      <button type="button" id="tl-all" role="tab" aria-selected="false">Todos os registros</button>
-    </div>
-    <div id="timeline"></div>
-    <p class="fine" id="timelinenote"></p>
-    <p><button type="button" class="ghost" id="tl-expand">Mostrar todo o histórico</button></p>
-
-    <section id="followsec" hidden>
-      <h2 class="reveal">Novos episódios disponíveis</h2>
-      <ul class="profiles" id="follows"></ul>
-      <p class="fine" id="follownote"></p>
+    <section id="overview" class="section-block" aria-labelledby="overview-title">
+      <div class="page-heading"><div><h1 id="overview-title">Seu streaming, em perspectiva.</h1><p>O que sua conta registra, organizado para você explorar.</p></div><span class="read-time" id="read-time"></span></div>
+      <div class="filterbar"><span class="filter-label">Período</span><div class="switch" id="years"></div><div class="switch" id="months" hidden></div><span class="fine" id="period-context">Todo o histórico disponível</span></div>
+      <div class="summary-grid"><div class="hero" id="hero"><div class="hero-art" id="heroart"></div><div class="hero-art" id="heroart2"></div><p id="heroperiod"></p><h2 class="herotitle" id="herotitle"></h2><span class="fig" id="herofig">0</span><p class="cap" id="herocap"></p></div><div class="cards" id="cards"></div></div>
+      <p class="method-note">Os indicadores refletem os registros sincronizados da conta, não um log completo de todas as sessões. Estimativas e limitações são apresentadas junto aos dados.</p>
+      <p class="notice" id="hoursnote" hidden></p><ul class="shelf" id="shelfstates"></ul><p class="fine" id="shelfnote"></p>
     </section>
-
-    <section id="profilesec" hidden>
-      <h2 class="reveal">Perfis da conta</h2>
-      <ul class="profiles" id="profiles"></ul>
-      <p class="fine" id="profilenote"></p>
-    </section>
-
-    <section id="withheldsec" hidden>
-      <h2 class="reveal">Informações fora da exportação</h2>
-      <div class="withheld">
-        <p class="fine" style="margin:0">The export this backend hands you leaves some categories out by design. They are still on the server.</p>
-        <ul id="withheld"></ul>
-      </div>
-    </section>
-
-
-    <h2>A conta</h2>
-    <dl class="rec" id="account"></dl>
-    <p class="fine" style="margin-top:.9rem">
-      <button type="button" class="ghost" id="unmask">Mostrar e-mail</button>
-      &nbsp;Masked by default, so this is safe to screenshot.
-    </p>
-
+    <section id="ranking" class="section-block" aria-labelledby="ranking-title"><div class="section-heading"><div><h2 id="ranking-title">O que marcou seu tempo</h2><p>Mais assistidos e distribuição dos horários registrados.</p></div></div><div class="ranking-grid">
+      <article class="panel"><div class="panel-heading"><h3>Mais assistidos</h3><span>Top 10</span></div><ol class="top" id="top"></ol><p class="empty-state" id="top-empty" hidden>Nenhuma reprodução neste período.</p></article>
+      <article class="panel"><div class="panel-heading"><h3>Horários dos registros</h3><span>00h a 23h</span></div><div class="clock" id="clock" role="group" aria-label="Quantidade de registros por hora"></div><div class="axis" aria-hidden="true"><span>00h</span><span>06h</span><span>12h</span><span>18h</span><span>23h</span></div><p class="fine" id="clocknote"></p><p class="fine">Cada item contribui com sua última data registrada. Não representa a duração assistida em cada hora.</p><details class="data-details"><summary>Ver valores por hora</summary><div class="table-scroll"><table id="clock-data"><caption class="sr-only">Registros por hora no fuso indicado acima</caption><thead><tr><th scope="col">Hora</th><th scope="col">Registros</th></tr></thead><tbody></tbody></table></div></details></article>
+    </div></section>
+    <section id="insights" class="section-block" aria-labelledby="insights-title"><div class="section-heading"><div><h2 id="insights-title">Suas preferências, em detalhe</h2><p>Metadados dos títulos. Os valores continuam visíveis, sem depender do mouse.</p></div></div><div class="insights-grid">
+      <article class="panel"><div class="panel-heading"><h3>Gêneros</h3></div><div class="gbar" id="gbar"></div><ul class="genres distribution-list" id="genres"></ul><p class="fine" id="genrenote"></p></article>
+      <article class="panel"><div class="panel-heading"><h3>Décadas</h3></div><div class="gbar" id="decbar"></div><ul class="genres distribution-list" id="decades"></ul><p class="fine" id="decnote"></p></article>
+      <article class="panel panel-wide"><div class="panel-heading"><h3>Elenco e direção</h3></div><ul class="genres people-list" id="people"></ul><p class="fine" id="peoplenote"></p></article>
+      <article class="panel panel-wide"><div class="panel-heading"><h3>Seus destaques</h3><span>Padrões do histórico</span></div><ul class="badges" id="badges"></ul></article>
+    </div></section>
+    <section id="history" class="section-block" aria-labelledby="history-title"><div class="section-heading"><div><h2 id="history-title">Seu histórico</h2><p>Títulos, progresso e datas, em uma única linha do tempo.</p></div><button id="clear-search" type="button" class="ghost" hidden>Limpar busca</button></div><div class="panel history-panel"><div class="history-toolbar"><div class="switch" role="tablist" aria-label="Registros do histórico"><button type="button" id="tl-played" role="tab" aria-selected="true">Reproduzidos</button><button type="button" id="tl-all" role="tab" aria-selected="false">Todos os registros</button></div><span id="search-summary" class="fine" role="status" aria-live="polite"></span></div><p class="search-explainer fine" id="search-explainer" hidden>A busca filtra somente esta lista. Os indicadores e o escopo de exclusão não são alterados.</p><div id="timeline"></div><p class="empty-state" id="history-empty" hidden>Nenhum registro corresponde à busca ou ao período.</p><p class="fine" id="timelinenote"></p><button type="button" class="ghost" id="tl-expand">Mostrar todo o histórico</button></div></section>
+    <section id="followsec" class="section-block panel" hidden><div class="panel-heading"><h2>Novos episódios disponíveis</h2></div><ul class="profiles" id="follows"></ul><p class="fine" id="follownote"></p></section>
+    <section id="account-section" class="section-block" aria-labelledby="account-title"><div class="section-heading"><div><h2 id="account-title">Conta e perfis</h2><p>Informações retornadas pelo backend, com e-mail oculto por padrão.</p></div></div><div class="account-grid"><article class="panel"><div class="panel-heading"><h3>A conta</h3></div><dl class="rec" id="account"></dl><p class="account-mask"><button type="button" class="ghost" id="unmask">Mostrar e-mail</button></p></article><div class="account-side"><section id="profilesec" class="panel" hidden><div class="panel-heading"><h3>Perfis da conta</h3></div><ul class="profiles" id="profiles"></ul><p class="fine" id="profilenote"></p></section><section id="withheldsec" class="panel" hidden><div class="panel-heading"><h3>Fora da exportação</h3></div><div class="withheld"><p class="fine">Algumas categorias são omitidas pelo backend. Isso não significa que foram apagadas do servidor.</p><ul id="withheld"></ul></div></section></div></div></section>
   </section>
-
-  <details class="breakdown-details">
-    <summary>Privacidade e limites desta instância</summary>
-    <p class="fine" style="margin-top:1rem">Auto-hospedar o RePlay não migra sua conta Nuvio ou Stremio. O histórico continua no backend selecionado. Capas e metadados complementares são consultados no Cinemeta. Não há newsletter, rastreamento analítico, fontes ou scripts de terceiros.</p>
-    <p class="fine">Escrita e exclusão estão disponíveis e modificam a conta real após confirmação. Exporte os dados antes de alterar o histórico. O Nuvio oficial pode recusar restauração; uma exportação não garante recuperação.</p>
-  </details>
-
-  <section id="actions" hidden>
-    <h2>Gerenciar seus dados</h2>
+  <section id="actions" class="section-block" aria-labelledby="actions-title" hidden>
+    <div class="section-heading"><div><h2 id="actions-title">Gerenciar seus dados</h2><p>Exportação e alterações na conta conectada.</p></div></div>
     <p class="fine">Exporte uma cópia antes de alterar o histórico. <span id="export-note"></span></p>
     <p style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
       <button type="button" class="ghost" id="dl-export" disabled>Exportar meus dados</button>
@@ -439,13 +94,17 @@
     </li></ul>
     <p style="margin-top:1.2rem"><button type="button" class="ghost" id="signout">Sair desta sessão</button></p>
   </section>
-
+  <details id="privacy" class="privacy-panel">
+    <summary>Privacidade e limites desta instância</summary>
+    <p class="fine" style="margin-top:1rem">Auto-hospedar o RePlay não migra sua conta Nuvio ou Stremio. O histórico continua no backend selecionado. Capas e metadados complementares são consultados no Cinemeta. Não há newsletter, rastreamento analítico, fontes ou scripts de terceiros.</p>
+    <p class="fine">Escrita e exclusão estão disponíveis e modificam a conta real após confirmação. Exporte os dados antes de alterar o histórico. O Nuvio oficial pode recusar restauração; uma exportação não garante recuperação.</p>
+  </details>
   <footer>
     <a href="https://github.com/AdrianoHG/replay" target="_blank" rel="noopener noreferrer">Código-fonte deste fork</a> &middot; <a href="LICENSE">AGPL-3.0</a> &middot; <span id="version"></span>
     Baseado no <a href="https://github.com/elfhosted/replay" target="_blank" rel="noopener noreferrer">RePlay da ElfHosted</a>. Sem telemetria ou scripts externos. <span id="tzline"></span>
   </footer>
 </main>
-
 <script src="app.js" defer></script>
+<script src="ui.js" defer></script>
 </body>
 </html>
