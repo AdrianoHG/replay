@@ -1,0 +1,16 @@
+{
+  "name": "replay-personal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fork pessoal do RePlay para Nuvio e Stremio",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/guards.test.mjs",
+    "test:e2e": "playwright test",
+    "check": "node --check app.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}

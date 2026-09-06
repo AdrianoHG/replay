@@ -1,71 +1,44 @@
-# RePlay
+# RePlay pessoal
 
-**RePlay reads your own streaming record back to you, and shows you where it lives.**
+Fork do [RePlay da ElfHosted](https://github.com/elfhosted/replay), sob AGPL-3.0. Consulta histórico e estatísticas de Nuvio, Stremio e backends Nuvio compatíveis. A interface de acesso, navegação principal e avisos críticos foram adaptados para português brasileiro; parte dos textos analíticos permanece no idioma upstream.
 
-Every Stremio-style app keeps your library and your playback position on a server, so your
-place follows you between devices. RePlay signs in to that server as you, reads what it holds,
-and renders it: hours logged, what you played, what you opened and never played, when you
-watch, what you gravitate to, and the whole chronicle in order.
+## O que muda
 
-It supports three backends:
+Nuvio é a seleção inicial. Newsletter, formulários Kit, promoção comercial de hospedagem e cartões sociais comerciais foram removidos. O JavaScript fica em arquivo próprio, sem bibliotecas de runtime, permitindo CSP sem script inline. Escrita, exclusão, exportação e restauração continuam disponíveis com suas confirmações. A licença, os créditos e o código-fonte permanecem acessíveis.
 
-| Backend | How it is read |
-| --- | --- |
-| Stremio | `api.strem.io`, the same API the official clients use |
-| Nuvio | `api.nuvio.tv`, over its published PostgREST schema |
-| Any Nuvio-compatible backend | give it a URL; it asks for `/.well-known/nuvio` |
+## Privacidade e limites
 
-## Why this repository is public
+O servidor entrega apenas arquivos estáticos. Autenticação e operações de conta são feitas diretamente pelo navegador contra o backend selecionado. Auto-hospedar este painel não auto-hospeda nem migra a conta Nuvio. Cinemeta fornece metadados e artes complementares. Não há telemetria nem scripts de terceiros no aplicativo.
 
-RePlay asks for your streaming account credentials. You should not have to take anybody's word
-for what happens to them, so the whole thing is one file you can read in an afternoon.
+A senha não é persistida pelo aplicativo. O token fica na sessão da aba por padrão. A opção de lembrar o dispositivo é desmarcada inicialmente e persiste o token por até 30 dias. Use somente backends confiáveis; a descoberta de um backend próprio pode indicar outro endpoint de autenticação. A CSP permite conexões HTTPS a hosts customizados por compatibilidade, mas não permite scripts remotos.
 
-What the code does, and what you can verify for yourself:
+**Exclusões alteram o histórico real.** A restauração depende das permissões do backend e o Nuvio oficial pode recusá-la. Uma exportação pode conter URLs autenticadas de addons: proteja o arquivo. Não use testes automatizados para apagar dados reais.
 
-- **There is no server.** `index.html` is a static page. There is no backend to send anything to.
-- **Your password goes to your own backend and nowhere else.** Search for `fetch(` and check
-  every call site. They are your backend, Stremio's own Cinemeta catalogue (for artwork and
-  genres), and Kit, only if you tick the newsletter box.
-- **Your password is never stored.** The session key your backend returns is held in
-  `sessionStorage` for the tab, or in `localStorage` if you tick "stay signed in". Signing out
-  deletes it locally and invalidates it upstream.
-- **No analytics, no cookies, no third-party scripts, no web fonts.** Artwork is linked from
-  Stremio's own metadata CDN with `referrerpolicy="no-referrer"`.
+## Executar
 
-If you find something that contradicts any of the above, please open an issue.
-
-## Running it
-
-There is no build step.
+Requisitos de produção: Docker e Docker Compose. Não há banco de dados nem dependência Node.js em produção.
 
 ```sh
-git clone <this repo> && cd replay
-python3 -m http.server 8080
-# then open http://127.0.0.1:8080
+docker compose config --quiet
+docker compose up -d --build
+curl --fail http://127.0.0.1:8130/healthz
 ```
 
-Opening `index.html` directly from disk mostly works too, though some browsers are stricter
-about `file://` origins.
+O serviço fica restrito a 127.0.0.1:8130. Publique-o por um reverse proxy HTTPS privado. O contêiner executa como UID 101, com sistema de arquivos somente leitura, sem capacidades Linux e sem acesso ao socket Docker. Limites: 64 MiB, 0,25 CPU e 64 processos. A imagem base é fixada por digest; somente os arquivos públicos necessários entram na imagem. O endpoint de saúde é /healthz.
 
-## Hosting
+## Testar
 
-ElfHosted runs the public instance, and also hosts private Nuvio-compatible backends for
-people who would rather their record sat somewhere they administer:
-<https://elfhosted.com>
-
-## The social card
-
-`og.png` is generated from `og-card.html`, which is a standalone 1200x630 page using the same
-palette. To regenerate after a copy or design change, screenshot it at that viewport:
-
-```js
-// playwright
-await page.setViewportSize({ width: 1200, height: 630 });
-await page.goto('file:///path/to/og-card.html');
-await page.screenshot({ path: 'og.png' });
+```sh
+npm ci --ignore-scripts
+npm run check
+npm test
+npm run test:e2e
 ```
 
-## Licence
+A suíte usa Playwright com Microsoft Edge instalado, perfil temporário e contas simuladas. Sem credenciais reais. Os testes de comportamento recebem os bytes do checkout diretamente no navegador para impedir interferência da inspeção HTTP do host. Para validar os arquivos entregues por uma instância, defina REPLAY_TEST_URL com seu endereço HTTPS privado; as chamadas de conta permanecem interceptadas.
 
-[GNU AGPL v3](LICENSE). In short: use it, read it, change it, run it. If you run a modified
-version where other people can reach it, publish your changes.
+## Atualização e reversão
+
+Atualizações não são automáticas. Revise diferenças do upstream, execute as suítes, gere um commit e reconstrua apenas este serviço. Não substitua o fork por upstream/main sem revisar as adaptações. Para reverter, use uma cópia limpa do commit anterior e reconstrua o contêiner; configurações de proxy e dashboards devem ter backup independente.
+
+Base inicial: commit upstream 448251ca4e49f8f4595d26d1414ee37db04877b1. Consulte LICENSE para os termos completos.

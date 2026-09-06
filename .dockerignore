@@ -1,0 +1,8 @@
+**
+!Dockerfile
+!index.html
+!app.js
+!icon.svg
+!LICENSE
+!deploy/
+!deploy/nginx.conf
