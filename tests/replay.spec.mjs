@@ -11,9 +11,9 @@ async function backend(page,options={}){
    if(process.env.REPLAY_TEST_URL){await route.continue();return;}
    // Testes de comportamento recebem bytes exatos do checkout. O AdGuard do host
    // modifica respostas HTTP, inclusive CSP; a entrega real tem validação separada.
-   const files={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/icon.svg':'icon.svg','/LICENSE':'LICENSE'};
+   const files={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/ui.js':'ui.js','/styles.css':'styles.css','/icon.svg':'icon.svg','/LICENSE':'LICENSE'};
    const file=files[url.pathname];if(!file){await route.fulfill({status:404,body:''});return;}
-   const type=file.endsWith('.js')?'application/javascript':file.endsWith('.svg')?'image/svg+xml':file==='LICENSE'?'text/plain':'text/html';
+   const type=file.endsWith('.css')?'text/css':file.endsWith('.js')?'application/javascript':file.endsWith('.svg')?'image/svg+xml':file==='LICENSE'?'text/plain':'text/html';
    await route.fulfill({status:200,contentType:type+'; charset=utf-8',headers:{'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self' https:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'"},body:await fs.readFile(file)});return;
   }
   state.external.push(url.hostname);
@@ -46,13 +46,13 @@ test('entrada Nuvio, troca de backend, nenhuma chamada comercial ou erro',async(
  await expect(page.locator('#remember')).not.toBeChecked();
  await page.locator('[data-backend="stremio"]').click();await page.locator('#mode-toggle').click();await expect(page.locator('#authkey')).toBeVisible();
  await page.locator('[data-backend="nuvio"]').click();await expect(page.locator('#password')).toBeVisible();
- await page.screenshot({path:'../replay-evidence/entrada-desktop.png',fullPage:true});
+ await page.screenshot({path:'../replay-redesign-evidence/entrada-desktop.png',fullPage:true});
  expect(s.external).toEqual([]);expect(s.errors).toEqual([]);
 });
 test('entrada em celular sem transbordamento horizontal',async({page})=>{
  await backend(page);await page.setViewportSize({width:390,height:844});await page.goto('/');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
- await page.screenshot({path:'../replay-evidence/entrada-celular.png',fullPage:true});
+ await page.screenshot({path:'../replay-redesign-evidence/entrada-celular.png',fullPage:true});
 });
 test('consulta, exportação, senha não persistida e retomada de sessão',async({page})=>{
  const s=await backend(page);await signIn(page);
@@ -61,7 +61,7 @@ test('consulta, exportação, senha não persistida e retomada de sessão',async
  await expect(page.locator('#password')).toHaveValue('');
  const dlPromise=page.waitForEvent('download');await page.locator('#dl-export').click();const dl=await dlPromise;
  expect(JSON.parse(await fs.readFile(await dl.path(),'utf8'))).toEqual(s.backup);
- await page.screenshot({path:'../replay-evidence/estatisticas-simuladas.png',fullPage:true});
+ await page.screenshot({path:'../replay-redesign-evidence/estatisticas-simuladas.png',fullPage:true});
  await page.reload();await expect(page.locator('#resume')).toBeVisible();await page.locator('#resumego').click();await expect(page.locator('#results')).toBeVisible();
  expect(s.calls.filter(x=>x.path==='/auth/v1/token')).toHaveLength(1);expect(s.errors).toEqual([]);
 });

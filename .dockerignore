@@ -6,3 +6,5 @@
 !LICENSE
 !deploy/
 !deploy/nginx.conf
+!ui.js
+!styles.css

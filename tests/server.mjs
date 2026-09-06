@@ -1,7 +1,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
-const files = {'/':'index.html','/index.html':'index.html','/app.js':'app.js','/icon.svg':'icon.svg','/LICENSE':'LICENSE'};
-const mime = {'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8','.svg':'image/svg+xml'};
+const files = {'/':'index.html','/index.html':'index.html','/app.js':'app.js','/ui.js':'ui.js','/styles.css':'styles.css','/icon.svg':'icon.svg','/LICENSE':'LICENSE'};
+const mime = {'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};
 const csp = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self' https:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'";
 http.createServer((req,res)=>{
  const key = new URL(req.url,'http://localhost').pathname;

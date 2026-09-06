@@ -2,7 +2,7 @@ name: oracle-vps-replay
 services:
   replay:
     build: .
-    image: replay-personal:1.0.0
+    image: replay-personal:1.1.0
     container_name: oracle-vps-replay
     restart: unless-stopped
     ports:
