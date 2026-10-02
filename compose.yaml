@@ -6,18 +6,26 @@ services:
     container_name: oracle-vps-replay
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8130:8080"
+    - 127.0.0.1:8130:8080
     read_only: true
-    user: "101:101"
-    cap_drop: [ALL]
-    security_opt: [no-new-privileges:true]
+    user: 101:101
+    cap_drop:
+    - ALL
+    security_opt:
+    - no-new-privileges:true
     tmpfs:
-      - /tmp:size=16m,mode=1777,noexec,nosuid,nodev
+    - /tmp:size=16m,mode=1777,noexec,nosuid,nodev
     mem_limit: 64m
     cpus: 0.25
     pids_limit: 64
     logging:
       driver: json-file
       options:
-        max-size: "1m"
-        max-file: "2"
+        max-size: 1m
+        max-file: '2'
+networks:
+  default:
+    ipam:
+      config:
+      - subnet: 10.240.10.0/24
+        gateway: 10.240.10.1
