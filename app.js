@@ -3,7 +3,7 @@
 
   // Replaced at image build time. Left as the placeholder when the file is
   // opened straight from a checkout, which is how you can tell the two apart.
-  var VERSION = 'v1.1.0-personal';
+  var VERSION = 'v1.1.1-personal';
   var CINEMETA = 'https://v3-cinemeta.strem.io';
   var SPELLS = ['Lendo seu histórico', 'Organizando os títulos', 'Calculando as estatísticas', 'Carregando os metadados'];
   var spellTimer = null;
@@ -557,6 +557,13 @@
     return x * (scale || 1);
   }
 
+  // Anything that is not a film or an episode keeps its own type, so that a
+  // live channel is never mistaken for a ninety-minute film and credited as one.
+  function nuvioType(contentType, season) {
+    if (contentType === 'series' || Number(season) > 0) { return 'series'; }
+    return contentType ? String(contentType) : 'movie';
+  }
+
   function nuvioRows(backup) {
     var progress = collect(backup, function (o) { return has(o, 'content_id') && (has(o, 'position') || has(o, 'last_watched')); });
     var library  = collect(backup, function (o) { return has(o, 'content_id') && has(o, 'name'); });
@@ -581,7 +588,7 @@
       if (dur > 0 && pos > dur) { pos = dur; }
       byKey[keyOf(p)] = {
         key: keyOf(p), id: String(p.content_id), videoId: p.video_id || String(p.content_id),
-        type: (p.content_type === 'series' || Number(p.season) > 0) ? 'series' : 'movie',
+        type: nuvioType(p.content_type, p.season),
         name: lib.name || p.title || String(p.content_id),
         season: Number(p.season) || null, episode: Number(p.episode) || null,
         positionMs: pos, durationMs: dur, watchedMs: Math.min(pos, dur || pos),
@@ -604,7 +611,7 @@
         var lib2 = inLibrary[String(w.content_id)] || {};
         row = byKey[k] = {
           key: k, id: String(w.content_id), videoId: String(w.content_id),
-          type: (w.content_type === 'series' || Number(w.season) > 0) ? 'series' : 'movie',
+          type: nuvioType(w.content_type, w.season),
           name: w.title || lib2.name || String(w.content_id),
           season: Number(w.season) || null, episode: Number(w.episode) || null,
           positionMs: 0, durationMs: 0, watchedMs: 0,
@@ -630,7 +637,7 @@
       if (anyEpisode) { return; }
       byKey[k] = {
         key: k, id: String(l.content_id), videoId: String(l.content_id),
-        type: l.content_type === 'series' ? 'series' : 'movie',
+        type: nuvioType(l.content_type, null),
         name: l.name || String(l.content_id), season: null, episode: null,
         positionMs: 0, durationMs: 0, watchedMs: 0,
         last: toDate(l.updated_at || l.added_at), created: toDate(l.added_at || l.created_at),
@@ -969,6 +976,44 @@
     // Movies are already honest (they measure at 0.93 of that ceiling) so the
     // cap does not touch them, and the Nuvio backends are clamped per row
     // before this, so it never binds there either.
+    // Cinemeta does not always carry a runtime. Two of fourteen popular series
+    // sampled had none, The Dragon Prince and The Owl House among them, and for
+    // those an entry marked watched had nothing to be counted at and silently
+    // stayed at zero: the very thing the estimate exists to fix, still broken
+    // for a subset of shows, and invisible because those shows then sort to the
+    // bottom of Most watched and fall off it. Where the metadata is silent, use
+    // how long this account's own films and episodes actually run. That is
+    // measured data rather than a guess, and it holds up when Cinemeta is
+    // simply unreachable.
+    // Built from the whole account rather than the filtered view: otherwise a
+    // 2026 entry gets an estimate under All time and drops back to zero the
+    // moment 2026 is selected, because the measured rows it borrows from sit
+    // in 2025.
+    var durs = { movie: [], series: [] };
+    (allRows.length ? allRows : rows).forEach(function (r) {
+      if (r.durationMs > 0 && durs[r.type]) { durs[r.type].push(r.durationMs); }
+    });
+    var typical = {};
+    Object.keys(durs).forEach(function (k) {
+      var a = durs[k].sort(function (x, y) { return x - y; });
+      typical[k] = a.length ? a[Math.floor(a.length / 2)] : 0;
+    });
+    // A single yardstick for things whose own length can never be known, taken
+    // only from films and episodes, because those are the rows whose length can
+    // be checked against a runtime. Never from the same untrustworthy type: a
+    // channel claiming 4600 hours would otherwise be its own evidence.
+    var checkable = durs.movie.concat(durs.series).sort(function (x, y) { return x - y; });
+    var typicalAny = checkable.length ? checkable[Math.floor(checkable.length / 2)] : 0;
+    // The ceiling for things whose own length can never be known is the longest
+    // film or episode this account has actually sat through, not the typical
+    // one: an event or a sports fixture legitimately runs past a median
+    // half-hour episode, and the median would have thrown that viewing away.
+    // Six hours stands in for an account holding nothing measurable at all,
+    // because falling back to the stream's own figure would restore exactly the
+    // number this rejects.
+    var longestCheckable = checkable.length ? checkable[checkable.length - 1] : 0;
+    var sittingCap = longestCheckable > 0 ? longestCheckable : 6 * 3600000;
+
     rows.forEach(function (r) {
       r.effectiveMs = r.watchedMs;
       // The longer of the two ceilings, never the shorter: an extended cut runs
@@ -977,7 +1022,15 @@
       // only removed when it exceeds both what the metadata lists and the file
       // that was actually played.
       var mins = runtimeMin(r);
-      var unit = Math.max(mins ? mins * 60000 : 0, r.durationMs || 0);
+      // A file claiming to run longer than half a day is a live stream rather
+      // than a recording, and its duration is no better founded than the watch
+      // time sitting next to it: one account carried 4,600 hours in both fields
+      // for a channel opened once, so the bad number was its own ceiling.
+      // Below that the file length is real evidence, and a recorded position is
+      // already clamped to it, so a two-hour event in a three-hour video keeps
+      // its two hours.
+      var fileMs = (r.durationMs > 0 && r.durationMs <= 12 * 3600000) ? r.durationMs : 0;
+      var unit = Math.max(mins ? mins * 60000 : 0, fileMs);
       // A backend can record that you watched something without recording how
       // long for. Nuvio's watched_items carries no duration at all -- it is
       // what you get when you mark something watched rather than play it, or
@@ -996,18 +1049,43 @@
           // they got is measured time and belongs in the total; crediting a
           // whole runtime here would turn a few minutes into a full viewing.
           r.effectiveMs = r.positionMs;
-        } else if (unit > 0 && (r.type === 'movie' || r.type === 'series')) {
-          // plays counts every viewing ever, while a filtered view covers one
-          // period, so multiplying by it there would charge a whole history to
-          // whichever month happens to hold the latest date.
-          var times = yearFilter === 'all' ? Math.max(r.plays || 0, 1) : 1;
-          r.effectiveMs = unit * times;
-          t.estMs += r.effectiveMs;
-          t.estCount++;
+        } else if (r.type === 'movie' || r.type === 'series') {
+          // Still only films and series. A live-TV channel has no runtime
+          // because it does not have one, and estimating those credited hours
+          // nobody watched.
+          var each = unit > 0 ? unit : (typical[r.type] || 0);
+          if (each > 0) {
+            // plays counts every viewing ever, while a filtered view covers one
+            // period, so multiplying by it there would charge a whole history to
+            // whichever month happens to hold the latest date.
+            var times = yearFilter === 'all' ? Math.max(r.plays || 0, 1) : 1;
+            r.effectiveMs = each * times;
+            t.estMs += r.effectiveMs;
+            t.estCount++;
+          }
         }
       }
-      if (unit > 0) {
-        var ceiling = unit * Math.max(r.plays || 0, 1);
+      // Only a runtime belonging to THIS title may cap it. Another show's median
+      // cannot establish that this episode has ended: borrowing one trimmed 45
+      // minutes of recorded progress down to 26 because other episodes are
+      // shorter. Rows estimated from the median above are already exactly at
+      // their own ceiling, so they lose nothing by being left alone here.
+      // A live channel or an event has no runtime and no duration: nothing the
+      // backend says about it can be checked, and unbounded is how one account
+      // came to report 4,600 hours on a channel opened once. Those get the only
+      // yardstick there is, a typical viewing, and only ever as a ceiling.
+      // For a film or an episode, both inputs to unit are checkable: a runtime
+      // from the metadata, or the length of the file that was played. For a
+      // live channel neither exists, and the "duration" the stream reports is
+      // as unfounded as the watch time itself -- one account had both at 4,600
+      // hours for a channel opened once, so the garbage was its own ceiling.
+      // Those are bounded by a typical viewing instead.
+      // Films and episodes are bounded by their own runtime. Anything else has
+      // none, so where its file length was not credible either, the longest
+      // sitting this account can evidence stands in.
+      var capUnit = (r.type === 'movie' || r.type === 'series') ? unit : (unit || sittingCap);
+      if (capUnit > 0) {
+        var ceiling = capUnit * Math.max(r.plays || 0, 1);
         // For a series the unit is only the episode this row happens to
         // describe, while the time spans every episode watched, and episodes
         // vary: a feature-length opener against a half-hour regular. Allow for
@@ -1019,7 +1097,7 @@
         // sitting at the end of the file is the last completed play, not an
         // extra one, so it earns no allowance.
         var pos = r.positionMs || 0;
-        if (pos > 0 && pos < unit * 0.9) { ceiling += pos; }
+        if (pos > 0 && pos < capUnit * 0.9) { ceiling += pos; }
         if (r.effectiveMs > ceiling) {
           t.cappedMs += r.effectiveMs - ceiling;
           t.cappedCount++;
@@ -1104,7 +1182,8 @@
       parts.push(n(t.estCount) + ' ' + (t.estCount === 1 ? 'entry was' : 'entries were') +
         ' marked watched without any playback time recorded, which is what happens when you ' +
         'mark something watched rather than play it. ' + (t.estCount === 1 ? 'It is' : 'They are') +
-        ' counted at the runtime the metadata lists, so ' + (estimated === 1
+        ' counted at ' + (t.estCount === 1 ? 'its' : 'their') + ' listed runtime, or at the ' +
+        'typical length of what else you watch where nothing is listed, so ' + (estimated === 1
           ? 'about an hour of this total is an estimate rather than a measurement.'
           : 'about ' + n(estimated) + ' of these hours are an estimate rather than a measurement.'));
     }
@@ -1113,9 +1192,10 @@
       parts.push(n(t.cappedCount) + ' ' + (t.cappedCount === 1 ? 'title reports' : 'titles report') +
         ' more time than ' + (t.cappedCount === 1 ? 'its' : 'their') + ' runtime allows. ' +
         backend.name + ' adds playback time up across sessions, and across episodes for a series, ' +
-        'so a title can total more than it can possibly run. ' +
-        (t.cappedCount === 1 ? 'It is' : 'They are') + ' counted here at what the runtime permits, about ' +
-        n(trimmed) + ' hours below the figure the backend reports.');
+        'so a title can total more than it can possibly run, and a live channel has no runtime ' +
+        'to be checked against at all. ' +
+        (t.cappedCount === 1 ? 'It is' : 'They are') + ' counted here at what a viewing can ' +
+        'plausibly run to, about ' + n(trimmed) + ' hours below the figure the backend reports.');
     }
     hn.textContent = parts.join(' ');
     hn.hidden = !parts.length;
