@@ -2,8 +2,8 @@ import {test,expect} from '@playwright/test';
 import fs from 'node:fs/promises';
 import {install} from './fixtures.mjs';
 
-test('estimativas usam a conta completa e canais ao vivo não inflam o total',async({page})=>{
- const base='http://127.0.0.1:18130';
+test('estimativas usam a conta completa e canais ao vivo não inflam o total',async({page,baseURL})=>{
+ const base=baseURL;
  const fixture=await install(page,base,{empty:true});
  // Acesso ao cálculo existe apenas no JavaScript interceptado deste ensaio.
  const source=await fs.readFile('app.js','utf8');
@@ -24,8 +24,8 @@ test('estimativas usam a conta completa e canais ao vivo não inflam o total',as
  expect(fixture.calls).toEqual([]);expect(fixture.unexpected).toEqual([]);expect(fixture.errors).toEqual([]);
 });
 
-test('a explicação nova das estimativas permanece em português',async({page})=>{
- await install(page,'http://127.0.0.1:18130',{empty:true});await page.goto('/');
+test('a explicação nova das estimativas permanece em português',async({page,baseURL})=>{
+ await install(page,baseURL,{empty:true});await page.goto('/');
  await page.locator('#hoursnote').evaluate(node=>{node.textContent='2 entries were marked watched without any playback time recorded, which is what happens when you mark something watched rather than play it. They are counted at their listed runtime, or at the typical length of what else you watch where nothing is listed, so about 3 of these hours are an estimate rather than a measurement.';});
  await expect(page.locator('#hoursnote')).toContainText('duração típica dos outros títulos da conta');
 });
